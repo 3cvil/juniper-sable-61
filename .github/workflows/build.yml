@@ -13,6 +13,9 @@ on:
       fresh:
         type: boolean
         default: false
+      buffer_check:
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -48,7 +51,9 @@ jobs:
           IN_DATE: ${{ inputs.date }}
           IN_DRAFT: ${{ inputs.draft }}
           IN_FRESH: ${{ inputs.fresh }}
+          IN_BUFFER_CHECK: ${{ inputs.buffer_check }}
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          BUFFER_KEY: ${{ secrets.BUFFER_KEY }}
           SRC_REPO: ${{ secrets.SRC_REPO }}
           SRC_TOKEN: ${{ secrets.SRC_TOKEN }}
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
