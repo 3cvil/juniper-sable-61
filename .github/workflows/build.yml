@@ -1,0 +1,60 @@
+name: build
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        required: false
+      draft:
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.SRC_REPO }}
+          token: ${{ secrets.SRC_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .models
+            ~/.cache/huggingface
+          key: m-v1
+      - run: bash ci/run.sh
+        env:
+          IN_DATE: ${{ inputs.date }}
+          IN_DRAFT: ${{ inputs.draft }}
+          SRC_REPO: ${{ secrets.SRC_REPO }}
+          SRC_TOKEN: ${{ secrets.SRC_TOKEN }}
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+          PING_TOPIC: ${{ secrets.PING_TOPIC }}
+          COOKIES: ${{ secrets.COOKIES }}
+          PROXY: ${{ secrets.PROXY }}
+      - if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ "$(date +%d)" = "01" ] || exit 0
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/contents/.keep" -q .sha 2>/dev/null || true)
+          gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/.keep" -f message=update -f content="$(date +%F | base64)" ${sha:+-f sha=$sha} >/dev/null
