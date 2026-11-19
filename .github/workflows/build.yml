@@ -48,6 +48,7 @@ jobs:
           IN_DATE: ${{ inputs.date }}
           IN_DRAFT: ${{ inputs.draft }}
           IN_FRESH: ${{ inputs.fresh }}
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
           SRC_REPO: ${{ secrets.SRC_REPO }}
           SRC_TOKEN: ${{ secrets.SRC_TOKEN }}
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
