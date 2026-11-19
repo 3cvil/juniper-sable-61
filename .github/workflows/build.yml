@@ -4,13 +4,14 @@ on:
   schedule:
     - cron: '0 5 * * *'
     - cron: '0 7 * * 0'
+    - cron: '0 9 28-31 * *'
   workflow_dispatch:
     inputs:
       date:
         required: false
       format:
         type: choice
-        options: [day, week]
+        options: [day, week, month]
         default: day
       buffer_at:
         required: false
@@ -56,7 +57,7 @@ jobs:
       - run: bash ci/run.sh
         env:
           IN_DATE: ${{ inputs.date }}
-          IN_FORMAT: ${{ inputs.format || (github.event.schedule == '0 7 * * 0' && 'week' || 'day') }}
+          IN_FORMAT: ${{ inputs.format || (github.event.schedule == '0 7 * * 0' && 'week') || (github.event.schedule == '0 9 28-31 * *' && 'month') || 'day' }}
           IN_BUFFER_AT: ${{ inputs.buffer_at }}
           IN_DRAFT: ${{ inputs.draft }}
           IN_FRESH: ${{ inputs.fresh }}
