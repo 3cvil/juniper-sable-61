@@ -3,12 +3,19 @@ name: build
 on:
   schedule:
     - cron: '0 5 * * *'
+    # Backup: GitHub sometimes drops a scheduled run (20 Nov 2026 never fired).
+    # run.sh skips when today's release already exists.
+    - cron: '40 6 * * *'
     - cron: '0 7 * * 0'
     - cron: '0 9 28-31 * *'
   workflow_dispatch:
     inputs:
       date:
         required: false
+      channel:
+        type: choice
+        options: [orbit24, ai, money, football]
+        default: orbit24
       format:
         type: choice
         options: [day, week, month]
@@ -27,6 +34,11 @@ on:
 
 permissions:
   contents: write
+
+# The backup waits for a run of the same episode still going, then skips it.
+concurrency:
+  group: ${{ inputs.channel || 'orbit24' }}-${{ inputs.format || (github.event.schedule == '0 7 * * 0' && 'week') || (github.event.schedule == '0 9 28-31 * *' && 'month') || 'day' }}-${{ inputs.date }}${{ inputs.draft && '-draft' || '' }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -57,6 +69,8 @@ jobs:
       - run: bash ci/run.sh
         env:
           IN_DATE: ${{ inputs.date }}
+          IN_CHANNEL: ${{ inputs.channel }}
+          CHANNELS_LIVE: ${{ vars.CHANNELS_LIVE }}
           IN_FORMAT: ${{ inputs.format || (github.event.schedule == '0 7 * * 0' && 'week') || (github.event.schedule == '0 9 28-31 * *' && 'month') || 'day' }}
           IN_BUFFER_AT: ${{ inputs.buffer_at }}
           IN_DRAFT: ${{ inputs.draft }}
