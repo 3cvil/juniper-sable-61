@@ -10,6 +10,12 @@ on:
     - cron: '43 6 * * *'
     - cron: '11 7 * * 0'
     - cron: '13 9 28-31 * *'
+    # Comment runs (ci/comment.sh): every schedule starting '37 ' is one. After the
+    # daily (12:00 UK), weekly (17:00) and monthly (18:00) posts, plus a late spare.
+    - cron: '37 12 * * *'
+    - cron: '37 15 * * *'
+    - cron: '37 17 * * 0'
+    - cron: '37 18 28-31 * *'
   workflow_dispatch:
     inputs:
       date:
@@ -33,19 +39,24 @@ on:
       buffer_check:
         type: boolean
         default: false
+      comment:
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 # The backup waits for a run of the same episode still going, then skips it.
 concurrency:
-  group: ${{ inputs.channel || 'orbit24' }}-${{ inputs.format || (github.event.schedule == '11 7 * * 0' && 'week') || (github.event.schedule == '13 9 28-31 * *' && 'month') || 'day' }}-${{ inputs.date }}${{ inputs.draft && '-draft' || '' }}
+  group: ${{ (inputs.comment || startsWith(github.event.schedule || '', '37 ')) && 'comment' || '' }}${{ inputs.channel || 'orbit24' }}-${{ inputs.format || (github.event.schedule == '11 7 * * 0' && 'week') || (github.event.schedule == '13 9 28-31 * *' && 'month') || 'day' }}-${{ inputs.date }}${{ inputs.draft && '-draft' || '' }}
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 345
+    env:
+      COMMENT_RUN: ${{ inputs.comment || startsWith(github.event.schedule || '', '37 ') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,13 +67,16 @@ jobs:
           node-version: 24
           cache: npm
       - uses: actions/setup-python@v5
+        if: env.COMMENT_RUN != 'true'
         with:
           python-version: '3.11'
           cache: pip
       - uses: denoland/setup-deno@v2
+        if: env.COMMENT_RUN != 'true'
         with:
           deno-version: v2.x
       - uses: actions/cache@v4
+        if: env.COMMENT_RUN != 'true'
         with:
           path: |
             .models
@@ -78,6 +92,10 @@ jobs:
           IN_DRAFT: ${{ inputs.draft }}
           IN_FRESH: ${{ inputs.fresh }}
           IN_BUFFER_CHECK: ${{ inputs.buffer_check }}
+          IN_COMMENT: ${{ env.COMMENT_RUN }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
           BUFFER_KEY: ${{ secrets.BUFFER_KEY }}
           SRC_REPO: ${{ secrets.SRC_REPO }}
